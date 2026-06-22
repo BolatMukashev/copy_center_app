@@ -21,6 +21,9 @@ import boto3
 from botocore.exceptions import ClientError
 
 
+from config import R2_ACCESS_KEY_ID, R2_ACCOUNT_ID, R2_BUCKET_NAME, R2_SECRET_ACCESS_KEY
+
+
 class R2Client:
     """Клиент для работы с Cloudflare R2 Object Storage."""
 
@@ -31,16 +34,16 @@ class R2Client:
         secret_access_key: Optional[str] = None,
         bucket_name: Optional[str] = None,
     ):
-        self.account_id = account_id or os.environ["R2_ACCOUNT_ID"]
-        self.bucket_name = bucket_name or os.environ.get("R2_BUCKET_NAME")
+        self.account_id = R2_ACCOUNT_ID or os.environ["R2_ACCOUNT_ID"]
+        self.bucket_name = R2_BUCKET_NAME or os.environ.get("R2_BUCKET_NAME")
 
         endpoint_url = f"https://{self.account_id}.r2.cloudflarestorage.com"
 
         self.s3 = boto3.client(
             "s3",
             endpoint_url=endpoint_url,
-            aws_access_key_id=access_key_id or os.environ["R2_ACCESS_KEY_ID"],
-            aws_secret_access_key=secret_access_key or os.environ["R2_SECRET_ACCESS_KEY"],
+            aws_access_key_id=R2_ACCESS_KEY_ID or os.environ["R2_ACCESS_KEY_ID"],
+            aws_secret_access_key=R2_SECRET_ACCESS_KEY or os.environ["R2_SECRET_ACCESS_KEY"],
             region_name="auto",
         )
 
@@ -337,7 +340,7 @@ class R2Client:
 # Утилиты
 # ──────────────────────────────────────────
 
-def _human_size(size: int) -> str:
+def _human_size(size: float) -> str:
     for unit in ("Б", "КБ", "МБ", "ГБ", "ТБ"):
         if size < 1024:
             return f"{size:.1f} {unit}"
@@ -367,7 +370,7 @@ if __name__ == "__main__":
     # r2.print_objects(prefix="images/")
 
     # ── Загрузка ────────────────────────────
-    # r2.upload_file("photo.jpg", object_key="uploads/photo.jpg", content_type="image/jpeg")
+    r2.upload_file("uploads/frame_0038.png", object_key="frame_0038.png", content_type="image/png")
 
     # Загрузка из памяти
     # r2.upload_bytes(b"Hello, R2!", "hello.txt", content_type="text/plain")
