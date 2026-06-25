@@ -1,13 +1,15 @@
 from dotenv import dotenv_values
+from pathlib import Path
 import os
 
-
-config = dotenv_values(".env")
+_env_path = str(Path(__file__).parent / ".env")
+config = dotenv_values(_env_path)
 
 # конфиг бота
 BOT_API_KEY = os.environ.get("BOT_API_KEY") or config.get("BOT_API_KEY")
 ADMIN_ID = os.environ.get("ADMIN_ID") or config.get("ADMIN_ID")
-ADMIN_ID = int(ADMIN_ID)
+if ADMIN_ID:
+    ADMIN_ID = int(ADMIN_ID)
 
 
 """
