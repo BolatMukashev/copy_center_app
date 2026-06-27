@@ -1,52 +1,34 @@
 import logging
 import os
-from r2_storage import R2Client
+from r2_storage import upload_to_r2, CONTENT_TYPES
 from aiogram.filters.command import Command
 from aiogram.fsm.context import FSMContext
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.fsm.storage.memory import MemoryStorage
-from config import BOT_API_KEY, ADMIN_ID
+from aiogram.enums import ParseMode
+from config import BOT_API_KEY, ADMIN_ID, SITE, ALLOWED_EXTENSIONS
+from cc_converter import convert_to_pdf
 
 
-# логирование
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-# настройка бота
 bot = Bot(token=BOT_API_KEY)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 
 
-# Разрешённые расширения
-ALLOWED_EXTENSIONS = {".doc", ".docx", ".pdf", ".png", ".jpg", ".jpeg"}
+async def download_from_telegram(file_id: str) -> bytes:
+    """Скачивает файл из Telegram по file_id, возвращает байты."""
+    file = await bot.get_file(file_id)
+    file_bytes = await bot.download_file(file.file_path)
+    return file_bytes.read()
 
 
-CONTENT_TYPES = {
-    ".pdf":  "application/pdf",
-    ".doc":  "application/msword",
-    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    ".png":  "image/png",
-    ".jpg":  "image/jpeg",
-    ".jpeg": "image/jpeg",
-}
-
-
-@dp.message(Command("start"))
-async def cmd_start(message: types.Message, state: FSMContext):
-    user_name = message.from_user.full_name
-    user_id = message.from_user.id
-    await message.answer(
-        f"Привет, {user_name}! Я бот. Твой ID: {user_id}\n"
-        f"Отправь мне файл .doc, .docx, .pdf, .png, .jpg или .jpeg — я его сохраню."
-    )
-
-
-async def upload_to_r2(message: types.Message, file_id: str, file_name: str):
-    """Скачивает файл по file_id и загружает в R2."""
+async def handle_file(message: types.Message, file_id: str, file_name: str) -> None:
+    """Валидирует, скачивает из TG и загружает в R2."""
     _, ext = os.path.splitext(file_name.lower())
-
     if ext not in ALLOWED_EXTENSIONS:
         await message.answer(
             f"❌ Формат «{ext}» не поддерживается.\n"
@@ -58,21 +40,37 @@ async def upload_to_r2(message: types.Message, file_id: str, file_name: str):
     user_id = message.from_user.id
     object_key = f"{user_id}/{file_name}"
 
-    await message.answer("⏳ Загружаю файл в облако...")
+    await message.answer("⏳ Добавляю файл в очередь...")
 
-    file = await bot.get_file(file_id)
-    file_bytes = await bot.download_file(file.file_path)
-    data = file_bytes.read()
+    file_bytes = await download_from_telegram(file_id)
+
+    if ext == ".doc" or ext == ".docx":
+        pdf_bytes = convert_to_pdf(file_bytes, file_name)
+        file_bytes = pdf_bytes
+        ext = ".pdf"
+        pdf_filename = os.path.splitext(file_name)[0] + ".pdf"
+        file_name = pdf_filename
+        object_key = f"{user_id}/{file_name}"
+
 
     content_type = CONTENT_TYPES.get(ext, "application/octet-stream")
+    upload_to_r2(file_bytes, object_key=object_key, content_type=content_type)
 
-    r2 = R2Client()
-    r2.upload_bytes(data, object_key=object_key, content_type=content_type)
-
-    logger.info(f"Файл загружен в R2: {object_key} (от пользователя {user_id})")
+    logger.info(f"Файл от пользователя {user_id} сохранён: {object_key}")
     await message.answer(
-        f"✅ Файл «{file_name}» сохранён в облаке!\n"
-        f"Путь: {object_key}"
+        f"✅ Файл «{file_name}» добавлен в очередь!\n"
+        f'Путь: <a href="{SITE}/{user_id}">"{SITE}/{user_id}"</a>',
+        parse_mode=ParseMode.HTML
+    )
+
+
+@dp.message(Command("start"))
+async def cmd_start(message: types.Message, state: FSMContext):
+    user_name = message.from_user.full_name
+    user_id = message.from_user.id
+    await message.answer(
+        f"Привет, {user_name}! Я бот. Твой ID: {user_id}\n"
+        f"Отправь мне файл или изображение"
     )
 
 
@@ -80,15 +78,14 @@ async def upload_to_r2(message: types.Message, file_id: str, file_name: str):
 async def handle_document(message: types.Message):
     document = message.document
     file_name = document.file_name or "unknown"
-    await upload_to_r2(message, document.file_id, file_name)
+    await handle_file(message, document.file_id, file_name)
 
 
 @dp.message(F.photo)
 async def handle_photo(message: types.Message):
-    # Telegram сжимает фото — берём наибольшее разрешение
     photo = message.photo[-1]
     file_name = f"{photo.file_unique_id}.jpg"
-    await upload_to_r2(message, photo.file_id, file_name)
+    await handle_file(message, photo.file_id, file_name)
 
 
 async def main():
@@ -98,4 +95,3 @@ async def main():
 if __name__ == "__main__":
     import asyncio
     asyncio.run(main())
-

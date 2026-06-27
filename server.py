@@ -1,17 +1,21 @@
 import io
+import os
+from cc_converter import convert_to_pdf
 from pathlib import Path
-
+from config import ALLOWED_EXTENSIONS
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
+from r2_storage import R2Client, _human_size, CONTENT_TYPES
 
-from r2_storage import R2Client, _human_size
 
 BASE_DIR = Path(__file__).parent / "web"
 
+
 app = FastAPI(title="Copy Center File Viewer")
+
 
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
@@ -129,18 +133,26 @@ async def delete_file(telegram_id: str, filename: str):
 
 @app.post("/api/upload/{telegram_id}")
 async def upload_files(telegram_id: str, files: list[UploadFile] = File(...)):
-    ALLOWED_EXT = {'.doc', '.docx', '.pdf', '.png', '.jpg', '.jpeg'}
     try:
         r2_client = R2Client()
         uploaded = []
         for f in files:
             ext = Path(f.filename).suffix.lower()
-            if ext not in ALLOWED_EXT:
+            if ext not in ALLOWED_EXTENSIONS:
                 raise HTTPException(status_code=400, detail=f"Недопустимый формат: {ext}")
-            data = await f.read()
-            key = f"{telegram_id}/{f.filename}"
-            r2_client.upload_bytes(data, object_key=key, content_type=f.content_type or "application/octet-stream")
-            uploaded.append(key)
+            file_bytes = await f.read()
+            object_key = f"{telegram_id}/{f.filename}"
+
+            if ext == ".doc" or ext == ".docx":
+                pdf_bytes = convert_to_pdf(file_bytes, f.filename)
+                file_bytes = pdf_bytes
+                ext = ".pdf"
+                pdf_filename = os.path.splitext(f.filename)[0] + ".pdf"
+                object_key = f"{telegram_id}/{pdf_filename}"
+
+            content_type = CONTENT_TYPES.get(ext, "application/octet-stream")
+            r2_client.upload_bytes(file_bytes, object_key=object_key, content_type=content_type)
+            uploaded.append(object_key)
         return {"status": "ok", "count": len(uploaded)}
     except HTTPException:
         raise
@@ -152,3 +164,18 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+
+"""
+async def handle_document(message: Message):
+    # Скачиваем из Telegram в память
+    file_bytes = await download_file_to_bytes(message)
+    filename = message.document.file_name
+
+    if filename.endswith((".doc", ".docx")):
+        pdf_bytes = convert_to_pdf(file_bytes, filename)
+        
+        # Загружаем PDF обратно в R2
+        pdf_filename = filename.rsplit(".", 1)[0] + ".pdf"
+        upload_to_r2(pdf_bytes, f"{user_id}/{pdf_filename}")
+"""

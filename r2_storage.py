@@ -11,12 +11,24 @@ import os
 import sys
 from pathlib import Path
 from typing import Optional
-
+import logging
 import boto3
 from botocore.exceptions import ClientError
-
-
 from config import R2_ACCESS_KEY_ID, R2_ACCOUNT_ID, R2_BUCKET_NAME, R2_SECRET_ACCESS_KEY
+
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+CONTENT_TYPES = {
+    ".pdf":  "application/pdf",
+    ".doc":  "application/msword",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ".png":  "image/png",
+    ".jpg":  "image/jpeg",
+    ".jpeg": "image/jpeg",
+}
 
 
 class R2Client:
@@ -346,6 +358,14 @@ def _human_size(size: float) -> str:
 def _chunks(lst: list, n: int):
     for i in range(0, len(lst), n):
         yield lst[i : i + n]
+
+
+
+def upload_to_r2(data: bytes, object_key: str, content_type: str) -> None:
+    """Загружает байты в R2 по указанному ключу."""
+    r2 = R2Client()
+    r2.upload_bytes(data, object_key=object_key, content_type=content_type)
+    logger.info(f"Файл загружен в R2: {object_key}")
 
 
 # ──────────────────────────────────────────

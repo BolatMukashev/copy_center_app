@@ -12,6 +12,9 @@ if ADMIN_ID:
     ADMIN_ID = int(ADMIN_ID)
 
 
+ALLOWED_EXTENSIONS = {".doc", ".docx", ".pdf", ".png", ".jpg", ".jpeg"}
+
+
 """
 Конфиг r2 storage
 Настройка переменных окружения (или передать напрямую):
@@ -21,8 +24,11 @@ if ADMIN_ID:
     R2_BUCKET_NAME      — Имя бакета по умолчанию
 """
 
-R2_ACCOUNT_ID = os.environ.get("R2_ACCOUNT_ID") or config.get('R2_ACCOUNT_ID')
+R2_ACCOUNT_ID = os.environ.get("R2_ACCOUNT_ID") or config.get("R2_ACCOUNT_ID")
 R2_ACCESS_KEY_ID = os.environ.get("R2_ACCESS_KEY_ID") or config.get("R2_ACCESS_KEY_ID")
 R2_SECRET_ACCESS_KEY = os.environ.get("R2_SECRET_ACCESS_KEY") or config.get("R2_SECRET_ACCESS_KEY")
 R2_BUCKET_NAME = os.environ.get("R2_BUCKET_NAME") or config.get("R2_BUCKET_NAME")
 
+CC_TOKEN = os.environ.get("CC_TOKEN") or config.get("CC_TOKEN")
+
+SITE = "http://localhost:8000"
