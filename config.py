@@ -17,7 +17,7 @@ PRICE = int(PRICE) if PRICE else None
 PRINTER_EMAIL = os.environ.get("PRINTER_EMAIL") or config.get("PRINTER_EMAIL")
 
 
-ALLOWED_EXTENSIONS = {".doc", ".docx", ".pdf", ".png", ".jpg", ".jpeg"}
+ALLOWED_EXTENSIONS = {".doc", ".docx", ".pptx", ".pdf", ".png", ".jpg", ".jpeg", ".heic", ".heif", ".tiff", ".tif", ".webp"}
 
 
 """

@@ -7,7 +7,7 @@ from aiogram import Bot, Dispatcher, types, F
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.enums import ParseMode
 from config import BOT_API_KEY, ADMIN_ID, SITE, ALLOWED_EXTENSIONS
-from cc_converter import convert_to_pdf
+from cc_converter import convert_to_pdf, convert_to_png
 
 
 logging.basicConfig(level=logging.INFO)
@@ -44,14 +44,23 @@ async def handle_file(message: types.Message, file_id: str, file_name: str) -> N
 
     file_bytes = await download_from_telegram(file_id)
 
-    if ext == ".doc" or ext == ".docx":
+    if ext == ".doc" or ext == ".docx" or ext == ".pptx":
+        await message.answer("⏳ Конвертирую в PDF...")
         pdf_bytes = convert_to_pdf(file_bytes, file_name)
         file_bytes = pdf_bytes
         ext = ".pdf"
         pdf_filename = os.path.splitext(file_name)[0] + ".pdf"
         file_name = pdf_filename
         object_key = f"{user_id}/{file_name}"
-
+    
+    if ext == ".heic" or ext == ".heif" or ext == ".tiff" or ext == ".tif" or ext == ".webp":
+        await message.answer("⏳ Конвертирую в PNG...")
+        png_bytes = convert_to_png(file_bytes, file_name)
+        file_bytes = png_bytes
+        ext = ".png"
+        png_filename = os.path.splitext(file_name)[0] + ".png"
+        file_name = png_filename
+        object_key = f"{user_id}/{file_name}"
 
     content_type = CONTENT_TYPES.get(ext, "application/octet-stream")
     upload_to_r2(file_bytes, object_key=object_key, content_type=content_type)

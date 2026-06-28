@@ -1,6 +1,6 @@
 import io
 import os
-from cc_converter import convert_to_pdf
+from cc_converter import convert_to_pdf, convert_to_png
 from pathlib import Path
 from config import ALLOWED_EXTENSIONS, PRICE
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File
@@ -148,12 +148,19 @@ async def upload_files(telegram_id: str, files: list[UploadFile] = File(...)):
             file_bytes = await f.read()
             object_key = f"{telegram_id}/{f.filename}"
 
-            if ext == ".doc" or ext == ".docx":
+            if ext == ".doc" or ext == ".docx" or ext == ".pptx":
                 pdf_bytes = convert_to_pdf(file_bytes, f.filename)
                 file_bytes = pdf_bytes
                 ext = ".pdf"
                 pdf_filename = os.path.splitext(f.filename)[0] + ".pdf"
                 object_key = f"{telegram_id}/{pdf_filename}"
+            
+            if ext == ".heic" or ext == ".heif" or ext == ".tiff" or ext == ".tif" or ext == ".webp":
+                png_bytes = convert_to_png(file_bytes, f.filename)
+                file_bytes = png_bytes
+                ext = ".png"
+                png_filename = os.path.splitext(f.filename)[0] + ".png"
+                object_key = f"{telegram_id}/{png_filename}"
 
             content_type = CONTENT_TYPES.get(ext, "application/octet-stream")
             r2_client.upload_bytes(file_bytes, object_key=object_key, content_type=content_type)
