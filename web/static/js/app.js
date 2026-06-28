@@ -24,6 +24,7 @@ const loadingEl = document.getElementById('loading');
 const errorEl = document.getElementById('error');
 const filesContainer = document.getElementById('filesContainer');
 const emptyState = document.getElementById('emptyState');
+const totalCostEl = document.getElementById('totalCost');
 
 function show(el) {
     el.classList.remove('hidden');
@@ -83,6 +84,7 @@ async function handleDelete(key) {
 async function loadFiles(telegramId) {
     hide(filesContainer);
     hide(emptyState);
+    hide(totalCostEl);
     hideError();
     show(loadingEl);
 
@@ -104,10 +106,17 @@ async function loadFiles(telegramId) {
         }
 
         filesContainer.innerHTML = '';
+        let totalPages = 0;
         data.files.forEach(file => {
+            totalPages += file.page_count || 1;
             filesContainer.appendChild(createFileRow(file));
         });
         show(filesContainer);
+
+        if (data.price && totalPages > 0) {
+            totalCostEl.textContent = `Итого: ${data.price} ₸ × ${totalPages} стр. = ${data.price * totalPages} ₸`;
+            show(totalCostEl);
+        }
     } catch (err) {
         hide(loadingEl);
         showError(err.message || 'Произошла ошибка при загрузке');

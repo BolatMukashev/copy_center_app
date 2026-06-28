@@ -2,7 +2,7 @@ import io
 import os
 from cc_converter import convert_to_pdf
 from pathlib import Path
-from config import ALLOWED_EXTENSIONS
+from config import ALLOWED_EXTENSIONS, PRICE
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -59,14 +59,19 @@ def get_file_info(key: str, size: int) -> FileInfo:
 
 
 async def count_pdf_pages(r2_client: R2Client, key: str) -> int | None:
-    from PyPDF2 import PdfReader
+    import io
+    from pypdf import PdfReader
 
     try:
         data = r2_client.download_bytes(key)
         reader = PdfReader(io.BytesIO(data))
+
         if reader.is_encrypted:
-            reader.decrypt("")
+            if reader.decrypt("") == 0:
+                return None
+
         return len(reader.pages)
+
     except Exception:
         return None
 
@@ -97,7 +102,7 @@ async def list_files(telegram_id: str):
 
             files.append(file_info)
 
-        return {"telegram_id": telegram_id, "files": files, "count": len(files)}
+        return {"telegram_id": telegram_id, "files": files, "count": len(files), "price": PRICE}
     except Exception as e:
         print(f"Error listing files for {telegram_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Ошибка сервера: {e}")

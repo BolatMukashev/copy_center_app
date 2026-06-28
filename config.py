@@ -8,8 +8,13 @@ config = dotenv_values(_env_path)
 # конфиг бота
 BOT_API_KEY = os.environ.get("BOT_API_KEY") or config.get("BOT_API_KEY")
 ADMIN_ID = os.environ.get("ADMIN_ID") or config.get("ADMIN_ID")
-if ADMIN_ID:
-    ADMIN_ID = int(ADMIN_ID)
+ADMIN_ID = int(ADMIN_ID) if ADMIN_ID else None
+
+
+PRICE = os.environ.get("PRICE") or config.get("PRICE")
+PRICE = int(PRICE) if PRICE else None
+
+PRINTER_EMAIL = os.environ.get("PRINTER_EMAIL") or config.get("PRINTER_EMAIL")
 
 
 ALLOWED_EXTENSIONS = {".doc", ".docx", ".pdf", ".png", ".jpg", ".jpeg"}
