@@ -36,4 +36,9 @@ R2_BUCKET_NAME = os.environ.get("R2_BUCKET_NAME") or config.get("R2_BUCKET_NAME"
 
 CC_TOKEN = os.environ.get("CC_TOKEN") or config.get("CC_TOKEN")
 
+# green-api (WhatsApp)
+GREEN_API_URL = os.environ.get("GREEN_API_URL") or config.get("GREEN_API_URL")
+GREEN_API_INSTANCE_ID = os.environ.get("GREEN_API_INSTANCE_ID") or config.get("GREEN_API_INSTANCE_ID")
+GREEN_API_TOKEN = os.environ.get("GREEN_API_TOKEN") or config.get("GREEN_API_TOKEN")
+
 SITE = "http://localhost:8000"
